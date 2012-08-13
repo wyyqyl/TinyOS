@@ -166,3 +166,4 @@ pip-log.txt
 *.img
 *.o
 *.bin
+*.elf
