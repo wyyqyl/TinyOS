@@ -2,7 +2,9 @@ CC=gcc
 LD=ld
 OBJCOPY=objcopy
 
-CFLAGS=-c -m32
+INCLUDE=include
+
+CFLAGS=-c -m32 -I$(INCLUDE)
 LD_FLAGS=-Ttext=0x00 -m elf_i386 -s
 TRIM_FLAGS=-R .pdr -R .comment -R.note -S -O binary
 
@@ -25,11 +27,17 @@ boot/setup.bin: boot/setup.s
 system.bin: boot/head.s init/main.c
 	$(CC) $(CFLAGS) boot/head.s -o boot/head.o
 	$(CC) $(CFLAGS) init/main.c -o init/main.o
-	$(LD) boot/head.o init/main.o -o system.elf $(LD_FLAGS)
+	$(CC) $(CFLAGS) mm/memory.c -o mm/memory.o
+	$(CC) $(CFLAGS) kernel/traps.c -o kernel/traps.o
+	$(CC) $(CFLAGS) kernel/asm.s -o kernel/asm.o
+	$(CC) $(CFLAGS) kernel/mktime.c -o kernel/mktime.o
+	$(LD) boot/head.o init/main.o mm/memory.o kernel/traps.o \
+		kernel/asm.o kernel/mktime.o -o system.elf $(LD_FLAGS)
 	$(OBJCOPY) $(TRIM_FLAGS) system.elf $@
 	
 clean: 
-	@rm -f *.bin *.elf boot/*.o boot/*.bin boot/*.elf init/*.o init/*.elf
+	@rm -f *.bin *.elf boot/*.o boot/*.bin boot/*.elf init/*.o init/*.o \
+		kernel/*.o mm/*.o
 
 distclean: clean
 	@rm -f boot.img
