@@ -5,14 +5,23 @@
  */
 #include <debug.h>
 #include <time.h>
+#include <linux/sched.h>
 #include <asm/io.h>
+#include <asm/system.h>
 
 static char printbuf[1024];
 
 extern void mem_init(long start_mem, long end_mem);
 extern long kernel_mktime(struct tm * tm);
-extern trap_init(void);
-long startup_time;
+extern void trap_init(void);
+extern void blk_dev_init(void);
+extern void chr_dev_init(void);
+extern void tty_init(void);
+extern void sched_init(void);
+extern void buffer_init(long);
+extern void hd_init(void);
+extern void floppy_init(void);
+extern long rd_init(long mem_start, int length);
 long ROOT_DEV;
 
 /*
@@ -84,13 +93,20 @@ void main(void)		/* This really IS void, no error here. */
 		buffer_memory_end = 1*1024*1024;
 	main_memory_start = buffer_memory_end;
 #ifdef RAMDISK
-	main_memory_start += rd_init(main_memory_start, RAMDISK*1024);
+	main_memory_start += rd_init(main_memory_start, RAMDISK * 1024);
 #endif
 	mem_init(main_memory_start,memory_end);
 	trap_init();
-	mbp();
-	irpt(3);
+	blk_dev_init();
+	chr_dev_init();
+	tty_init();
 	time_init();
+	sched_init();
+	buffer_init(buffer_memory_end);
+	hd_init();
+	floppy_init();
+	sti();
+	move_to_user_mode();
 /*
  *   NOTE!!   For any other task 'pause()' would mean we have to get a
  * signal to awaken, but task0 is the sole exception (see 'schedule()')

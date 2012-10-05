@@ -1,0 +1,38 @@
+CC=gcc
+LD=ld
+OBJCOPY=objcopy
+
+INCLUDE=../include
+CFLAGS=-c -Wall -m32 -nostdinc -I$(INCLUDE)
+LDFLAGS=-Ttext=0x00 -m elf_i386 -s
+TRIMFLAGS=-R .pdr -R .comment -R.note -S -O binary
+
+CPP=$(CC) -E -nostdinc -I$(INCLUDE)
+
+.c.o:
+	$(CC) $(CFLAGS) -o $*.o $<
+
+OBJS = traps.o asm.o mktime.o
+
+kernel.o: $(OBJS)
+	$(LD) $(LDFLAGS) -o kernel.o $(OBJS)
+kernel.bin: kernel.o
+	$(OBJCOPY) $(TRIMFLAGS) -o kernel.bin kernel.o
+
+clean: 
+	@find . -regextype "posix-egrep" -regex ".*\.(o|bin)$\" -exec rm '{}' \;
+
+dep:
+	sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
+	(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
+			$(CPP) -M $$i;done) >> tmp_make
+	cp tmp_make Makefile
+
+distclean: clean
+	@rm -f boot.img
+
+### Dependencies:
+mktime.s mktime.o: mktime.c ../include/time.h
+traps.s traps.o: traps.c ../include/linux/head.h ../include/asm/system.h \
+ ../include/asm/io.h ../include/debug.h
+vsprintf.s vsprintf.o: vsprintf.c ../include/stdarg.h

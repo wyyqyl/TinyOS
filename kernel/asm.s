@@ -93,8 +93,6 @@ irq13:
 1:	outb %al,$0xA0
 	popl %eax
 	jmp coprocessor_error
-coprocessor_error:
-	jmp	coprocessor_error
 
 double_fault:
 	pushl $do_double_fault

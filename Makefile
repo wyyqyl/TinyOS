@@ -4,7 +4,7 @@ OBJCOPY=objcopy
 
 INCLUDE=include
 
-CFLAGS=-c -m32 -I$(INCLUDE)
+CFLAGS=-c -m32 -nostdinc -I$(INCLUDE) -fno-builtin -fno-stack-protector
 LD_FLAGS=-Ttext=0x00 -m elf_i386 -s
 TRIM_FLAGS=-R .pdr -R .comment -R.note -S -O binary
 
@@ -31,13 +31,37 @@ system.bin: boot/head.s init/main.c
 	$(CC) $(CFLAGS) kernel/traps.c -o kernel/traps.o
 	$(CC) $(CFLAGS) kernel/asm.s -o kernel/asm.o
 	$(CC) $(CFLAGS) kernel/mktime.c -o kernel/mktime.o
-	$(LD) boot/head.o init/main.o mm/memory.o kernel/traps.o \
-		kernel/asm.o kernel/mktime.o -o system.elf $(LD_FLAGS)
+	$(CC) $(CFLAGS) kernel/blk_drv/ll_rw_blk.c -o kernel/blk_drv/ll_rw_blk.o
+	$(CC) $(CFLAGS) kernel/blk_drv/hd.c -o kernel/blk_drv/hd.o
+	$(CC) $(CFLAGS) kernel/blk_drv/floppy.c -o kernel/blk_drv/floppy.o
+	$(CC) $(CFLAGS) kernel/blk_drv/ramdisk.c -o kernel/blk_drv/ramdisk.o
+	$(CC) $(CFLAGS) kernel/chr_drv/console.c -o kernel/chr_drv/console.o
+	$(CC) $(CFLAGS) kernel/chr_drv/keyboard.S -o kernel/chr_drv/keyboard.o
+	$(CC) $(CFLAGS) kernel/chr_drv/rs_io.s -o kernel/chr_drv/rs_io.o
+	$(CC) $(CFLAGS) kernel/chr_drv/serial.c -o kernel/chr_drv/serial.o
+	$(CC) $(CFLAGS) kernel/chr_drv/tty_io.c -o kernel/chr_drv/tty_io.o
+	$(CC) $(CFLAGS) kernel/sched.c -o kernel/sched.o
+	$(CC) $(CFLAGS) kernel/system_call.s -o kernel/system_call.o
+	$(CC) $(CFLAGS) kernel/vsprintf.c -o kernel/vsprintf.o
+	$(CC) $(CFLAGS) kernel/printk.c -o kernel/printk.o
+	$(CC) $(CFLAGS) kernel/signal.c -o kernel/signal.o
+	$(CC) $(CFLAGS) kernel/sys.c -o kernel/sys.o
+	$(CC) $(CFLAGS) kernel/panic.c -o kernel/panic.o
+	$(CC) $(CFLAGS) lib/ctypes.c -o lib/ctypes.o
+	$(CC) $(CFLAGS) lib/string.c -o lib/string.o
+	$(CC) $(CFLAGS) math/math_emulate.c -o math/math_emulate.o
+	$(CC) $(CFLAGS) fs/buffer.c -o fs/buffer.o
+	$(LD) $(LD_FLAGS) boot/head.o init/main.o mm/memory.o kernel/traps.o kernel/system_call.o\
+		kernel/asm.o kernel/blk_drv/ll_rw_blk.o kernel/mktime.o kernel/sched.o\
+		kernel/chr_drv/console.o kernel/chr_drv/keyboard.o kernel/chr_drv/rs_io.o\
+		kernel/chr_drv/serial.o kernel/chr_drv/tty_io.o  kernel/printk.o kernel/signal.o\
+		kernel/vsprintf.o lib/ctypes.o lib/string.o math/math_emulate.o kernel/sys.o\
+	  	fs/buffer.o kernel/blk_drv/hd.o kernel/blk_drv/floppy.o kernel/blk_drv/ramdisk.o \
+		kernel/panic.o -o system.elf 
 	$(OBJCOPY) $(TRIM_FLAGS) system.elf $@
 	
 clean: 
-	@rm -f *.bin *.elf boot/*.o boot/*.bin boot/*.elf init/*.o init/*.o \
-		kernel/*.o mm/*.o
+	@find . -regextype "posix-egrep" -regex ".*\.(o|bin|elf)$\" -exec rm '{}' \;
 
 distclean: clean
 	@rm -f boot.img
