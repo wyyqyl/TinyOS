@@ -1,12 +1,12 @@
 #ifndef _HEAD_H
 #define _HEAD_H
 
-typedef struct desc_struct {
-		unsigned long a,b;
-} desc_table[256];
+typedef struct _desc_struct {
+	unsigned long a,b;
+}desc_struct, desc_table[256];
 
 extern unsigned long pg_dir[1024];
-extern desc_table idt,gdt;
+extern desc_table idt, gdt;
 
 #define GDT_NUL 0
 #define GDT_CODE 1
